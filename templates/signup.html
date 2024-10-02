@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login_signup.css') }}">
+</head>
+<body>
+    <div class="wrapper fadeInDown">
+            <!-- Logo -->
+    <div class="fadeIn first" style="padding: 0 100px 0 0;">
+      <img src="{{ url_for('static', filename = 'Logo_square️.png') }}" id="icon" alt="Chatbot Logo" style="width: 500px;" />
+    </div>
+
+        <div id="formContent">
+            <h2 class="active">Sign Up</h2>
+            <p style="color:red;">{{error}}</p>
+
+            <!-- Sign-Up Form -->
+            <form method="POST" action="/signup_post">
+                <label for="name" class="fadeIn second" style="color: #FFFFFF;">Name:</label><br>
+                <input type="text" id="name" name="name" class="fadeIn third" placeholder="Enter your name" required><br><br>
+
+<!--                <label for="username" class="fadeIn second" style="color: #FFFFFF;">Username:</label><br>-->
+<!--                <input type="text" id="username" name="username" class="fadeIn third" placeholder="Choose a username" required><br><br>-->
+
+                <label for="email" class="fadeIn second" style="color: #FFFFFF;">Email:</label><br>
+                <input type="email" id="email" name="email" class="fadeIn third" placeholder="Enter your email" required><br><br>
+
+                <label for="password" class="fadeIn second" style="color: #FFFFFF;">Password:</label><br>
+                <input type="password" id="password" name="password" class="fadeIn third" placeholder="Enter your password" required><br><br>
+
+                <label for="confirm_password" class="fadeIn second" style="color: #FFFFFF;">Confirm Password:</label><br>
+                <input type="password" id="confirm_password" name="confirm_password" class="fadeIn third" placeholder="Confirm your password" required><br><br>
+
+                <button type="submit" class="fadeIn fourth" style="background-color: #FFFFFF; color: #121212;">Sign Up</button>
+            </form>
+
+            <div id="formFooter">
+            <a href="{{ url_for('login') }}" class="inactive underlineHover">Already have an account? Login In Instead!</a>
+      </div>
+        </div>
+    </div>
+</body>
+</html>
