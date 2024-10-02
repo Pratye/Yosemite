@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login_signup.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="wrapper fadeInDown">
+        <div id="formContent">
+            <h2 class="active">Verify OTP</h2>
+
+            <!-- OTP Form -->
+            <form method="POST" action="/verify_otp">
+                <label for="otp" class="fadeIn second" style="color: #FFFFFF;">Enter OTP sent to your email:</label><br>
+                <input type="text" id="otp" name="otp" class="fadeIn third" maxlength="6" placeholder="Enter OTP" required><br><br>
+                <button type="submit" class="fadeIn fourth">Verify</button>
+                <p id="timer" style="color: #FFFFFF;">Time remaining: 2:00 minutes</p>
+            </form>
+
+        </div>
+    </div>
+    <script>
+        let time = 120; // 2 minutes in seconds
+        let timerId = setInterval(() => {
+            let minutes = Math.floor(time / 60);
+            let seconds = time % 60;
+            document.getElementById("timer").innerHTML = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')} minutes`;
+            time--;
+            if (time <= 0) {
+                clearInterval(timerId);
+                window.location.href = "{{ url_for('login') }}";
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
+
+

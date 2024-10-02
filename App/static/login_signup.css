@@ -1,0 +1,138 @@
+/* General Styles */
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #121212;
+  color: #FFFFFF;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+#formContent {
+  background-color: #1E1E1E;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+#formContent h2 {
+  color: #EEEEEE;
+  font-weight: 500;
+  margin-bottom: 30px;
+}
+
+/* Logo */
+#icon {
+  margin-bottom: 20px;
+}
+
+/* Input Fields */
+input[type="email"], input[type="password"], input[type="text"] {
+  background-color: #2C2C2C;
+  color: #FFFFFF;
+  border: none;
+  padding: 15px;
+  margin: 10px 0;
+  width: 100%;
+  border-radius: 5px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+input[type="email"]::placeholder, input[type="password"]::placeholder, input[type="text"]::placeholder {
+  color: #999999;
+}
+
+/* OTP Field */
+input[type="text"] {
+  background-color: #2C2C2C;
+  color: #FFFFFF;
+  border: none;
+  padding: 15px;
+  margin: 10px 0;
+  width: 100%;
+  border-radius: 5px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+input[type="text"]::placeholder {
+  color: #999999;
+}
+
+/* Submit Button */
+button[type="submit"], input[type="submit"] {
+  background-color: #FFFFFF;
+  color: #121212;
+  border: none;
+  padding: 15px;
+  width: 100%;
+  border-radius: 5px;
+  font-size: 16px;
+  margin-top: 20px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+button[type="submit"]:hover, input[type="submit"]:hover {
+  background-color: #E0E0E0;
+  color: #000000;
+}
+
+/* Footer Links */
+#formFooter {
+  margin-top: 20px;
+}
+
+a.underlineHover {
+  color: #FFFFFF;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+a.underlineHover:hover {
+  color: #E0E0E0;
+  text-decoration: underline;
+}
+
+/* Error Message */
+p[style="color:red;"] {
+  color: #CF6679; /* Muted red for dark theme */
+  margin-bottom: 15px;
+}
+
+/* Adjustments for small screens */
+@media (max-width: 768px) {
+  #formContent {
+    width: 90%;
+    padding: 20px;
+  }
+
+  input[type="email"], input[type="password"], input[type="text"], button[type="submit"], input[type="submit"] {
+    font-size: 14px;
+  }
+}
+
+
+
+#icon {
+  margin-bottom: 20px;
+  width: 150px; /* or any size you prefer */
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.6); /* Adding shadow */
+  border-radius: 10px; /* Optional: adds rounded corners to the image */
+}
