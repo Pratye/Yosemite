@@ -10,7 +10,7 @@ RUN pip3 install --no-cache-dir -r requirements-lock.txt
 RUN pip install requests-toolbelt==0.10.1
 
 # Copy the rest of the application code
-COPY .. .
+COPY . .
 
 # Expose the port that the Flask app will run on
 EXPOSE 5000
