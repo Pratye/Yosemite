@@ -2,7 +2,7 @@ import os
 from ollama import Client
 
 
-ollama_client = Client(host='http://ollama:11434')
+ollama_client = Client(host='https://ollama-llama-892052331120.us-central1.run.app')
 model = 'llama3.1'
 try:
     ollama_client.chat(model)

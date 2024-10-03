@@ -13,18 +13,3 @@ services:
     environment:
       - FLASK_APP=app.py
       - FLASK_ENV=production
-
-  redis:
-    image: "redis:alpine"
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-
-volumes:
-  redis-data:

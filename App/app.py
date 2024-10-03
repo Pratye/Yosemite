@@ -9,52 +9,33 @@ import pyrebase
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import redis
+# Removed Redis import
 from flask import Flask, request, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import io
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-from langchain.document_loaders import UnstructuredFileLoader
+from langchain_community.document_loaders import UnstructuredFileLoader
 
 import chat_helper, scrape_helper
 
-# Flask and Redis setup
+# Flask and SQLite setup
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
-# Redis configuration
-redis_client = redis.StrictRedis(host='redis', port=6379, db=0, decode_responses=True)
-
-# Firebase configuration
-config = {
-  'apiKey': "AIzaSyAGQDaamCqI4URitEBD_PBAuR-cRtPCq70",
-  'authDomain': "sunflower-928b3.firebaseapp.com",
-   'databaseURL': "https://sunflower-928b3-default-rtdb.asia-southeast1.firebasedatabase.app",
-   'projectId': "sunflower-928b3",
-  'storageBucket': "sunflower-928b3.appspot.com",
-  'messagingSenderId': "405620669957",
-  'appId': "1:405620669957:web:022c0dd4a1628db80b266c",
-  'measurementId': "G-EHW2R4H6FL",
-'serviceAccount': './sunflower-928b3-firebase-adminsdk-8o750-26fefdf5b1.json'
-}
-
-# Initialize Firebase
-firebase = pyrebase.initialize_app(config)
-auth = firebase.auth()
-
-
-# basedir = os.path.abspath(os.path.dirname(__file__))
-# app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(basedir, "instance", "chat.db")}'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'  # Use your preferred database
+# SQLite configuration
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///chat.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# Models
 class User(db.Model):
     uid = db.Column(db.String(28), primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
@@ -62,7 +43,7 @@ class User(db.Model):
 
 class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.uid'), nullable=False)
+    user_id = db.Column(db.String(28), db.ForeignKey('user.uid'), nullable=False)  # Changed to String to match User.uid
     session_id = db.Column(db.String(36), nullable=False)  # UUID for each session
     chat_name = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -71,6 +52,76 @@ class Chat(db.Model):
     images = db.Column(db.Text, nullable=True)
     sender = db.Column(db.Text, nullable=False)  # 'user' or 'assistant'
 
+class TempData(db.Model):
+    key = db.Column(db.String(255), primary_key=True)
+    value = db.Column(db.Text, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+
+    def is_expired(self):
+        return datetime.utcnow() > self.expires_at
+
+# Create all tables
+with app.app_context():
+    db.create_all()
+
+# Firebase configuration
+config = {
+  'apiKey': "AIzaSyAGQDaamCqI4URitEBD_PBAuR-cRtPCq70",
+  'authDomain': "sunflower-928b3.firebaseapp.com",
+  'databaseURL': "https://sunflower-928b3-default-rtdb.asia-southeast1.firebasedatabase.app",
+  'projectId': "sunflower-928b3",
+  'storageBucket': "sunflower-928b3.appspot.com",
+  'messagingSenderId': "405620669957",
+  'appId': "1:405620669957:web:022c0dd4a1628db80b266c",
+  'measurementId': "G-EHW2R4H6FL",
+  'serviceAccount': './sunflower-928b3-firebase-adminsdk-8o750-26fefdf5b1.json'
+}
+
+# Initialize Firebase
+firebase = pyrebase.initialize_app(config)
+auth = firebase.auth()
+
+# Helper functions for TempData
+def set_temp_data(key, value, expires_in_seconds):
+    expires_at = datetime.utcnow() + timedelta(seconds=expires_in_seconds)
+    existing = TempData.query.filter_by(key=key).first()
+    if existing:
+        existing.value = value
+        existing.expires_at = expires_at
+    else:
+        temp_data = TempData(key=key, value=value, expires_at=expires_at)
+        db.session.add(temp_data)
+    db.session.commit()
+
+def get_temp_data(key):
+    temp_data = TempData.query.filter_by(key=key).first()
+    if temp_data:
+        if not temp_data.is_expired():
+            return temp_data.value
+        else:
+            db.session.delete(temp_data)
+            db.session.commit()
+    return None
+
+def delete_temp_data(key):
+    temp_data = TempData.query.filter_by(key=key).first()
+    if temp_data:
+        db.session.delete(temp_data)
+        db.session.commit()
+
+# Background thread to clean up expired TempData
+def cleanup_temp_data():
+    while True:
+        with app.app_context():
+            expired_data = TempData.query.filter(TempData.expires_at < datetime.utcnow()).all()
+            for data in expired_data:
+                db.session.delete(data)
+            db.session.commit()
+        # Sleep for a defined interval before next cleanup
+        threading.Event().wait(60)  # Waits for 60 seconds
+
+cleanup_thread = threading.Thread(target=cleanup_temp_data, daemon=True)
+cleanup_thread.start()
 
 # Email 2FA Function
 def send_otp(email, otp):
@@ -93,56 +144,74 @@ def send_otp(email, otp):
         server.quit()
         return True
     except Exception as e:
+        print(f"Error sending OTP: {e}")  # Logging the exception
         return False
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
     if request.method == 'POST':
-        user_otp = request.form['otp']
-        cookies = request.cookies
-        email = cookies.get('email').lower()
-        # email = redis_client.get('current_email')
+        user_otp = request.form.get('otp')
+        email = request.cookies.get('email', '').lower()
+
+        if not email:
+            error = "Email not found in cookies."
+            return render_template("login.html", error=error)
+
         otp_key = f"{email}_otp"
-        stored_otp = redis_client.get(otp_key)
+        stored_otp = get_temp_data(otp_key)
 
         if stored_otp == user_otp:
             auth_key = f"{email}_auth"
-            password = redis_client.get(auth_key)
-            name = redis_client.get(f"{email}_username")
+            password = get_temp_data(auth_key)
+            name = get_temp_data(f"{email}_username")
+
+            # if not password or not name:
+            #     error = "Authentication data missing or expired."
+            #     return render_template("login.html", error=error)
 
             try:
+                # Attempt to create user; if exists, pass
                 auth.create_user_with_email_and_password(email, password)
             except:
                 pass
-            user = auth.sign_in_with_email_and_password(email, password)
+
+            try:
+                user = auth.sign_in_with_email_and_password(email, password)
+            except Exception as e:
+                error = "Authentication failed. Please try again."
+                return render_template("login.html", error=error)
 
             res = make_response(redirect(url_for('index')))
             res.set_cookie('uid', user["localId"])
             try:
-                name = User.query.filter_by(uid=user["localId"]).first().name
-                # db.session.add(user)
-                # db.session.commit()
-                # res.set_cookie('username', name)
-            except:
-                user = User(uid=user["localId"], name=name, email=email.lower())
-                db.session.add(user)
-                db.session.commit()
+                user_record = User.query.filter_by(uid=user["localId"]).first()
+                if user_record:
+                    name = user_record.name
+                else:
+                    # If user not found in DB, create a new record
+                    user_record = User(uid=user["localId"], name=name, email=email)
+                    db.session.add(user_record)
+                    db.session.commit()
+                res.set_cookie('username', name)
+            except Exception as e:
+                print(f"Error fetching or creating user: {e}")
+                error = "Internal server error."
+                return render_template("login.html", error=error)
 
-            # res.set_cookie('username', user["username"])
-            # Cleanup Redis keys
+            # Cleanup TempData
             res.delete_cookie('email')
-            redis_client.delete(otp_key)
-            redis_client.delete(auth_key)
-            redis_client.delete(f"{email}_username")
+            delete_temp_data(otp_key)
+            delete_temp_data(auth_key)
+            delete_temp_data(f"{email}_username")
 
             return res
         else:
             error = "Invalid OTP! Please try again."
             res = make_response(render_template("login.html", error=error))
             res.delete_cookie('email')
-            redis_client.delete(otp_key)
-            redis_client.delete(f"{email}_auth")
-            redis_client.delete(f"{email}_username")
+            delete_temp_data(f"{email}_otp")
+            delete_temp_data(f"{email}_auth")
+            delete_temp_data(f"{email}_username")
 
             return res
     else:
@@ -161,10 +230,14 @@ def signup():
 def signup_post():
     if request.method == "POST":
         result = request.form
-        email = result["email"].lower()
-        password = result["password"]
-        confirm_password = result['confirm_password']
-        username = result["name"]#.lower()
+        email = result.get("email", "").lower()
+        password = result.get("password", "")
+        confirm_password = result.get('confirm_password', "")
+        username = result.get("name", "").strip()
+
+        if not email or not password or not username:
+            error = "All fields are required."
+            return render_template("signup.html", error=error)
 
         if password != confirm_password:
             error = "Passwords don't match! Please correct the password"
@@ -176,27 +249,27 @@ def signup_post():
             if send_otp(email, otp):
                 otp_key = f"{email}_otp"
                 auth_key = f"{email}_auth"
-                # auth_email = f"{email}_current_email"
                 auth_username = f"{email}_username"
 
-                redis_client.setex(otp_key, 120, otp)  # OTP valid for 5 minutes
-                redis_client.setex(auth_key, 120, password)
-                redis_client.setex(auth_username, 120,username)
+                set_temp_data(otp_key, otp, 120)  # OTP valid for 2 minutes
+                set_temp_data(auth_key, password, 120)
+                set_temp_data(auth_username, username, 120)
 
                 res = make_response(redirect(url_for('verify_otp')))
                 res.set_cookie('email', email)
 
                 return res
             else:
-                return "Failed to send OTP."
+                error = "Failed to send OTP."
+                return render_template("signup.html", error=error)
 
         except Exception as e:
+            print(f"Signup error: {e}")
             if 'WEAK_PASSWORD' in str(e):
                 error = 'Weak Password! Password should be at least 6 characters'
             else:
-                print(e)
                 error = 'Account already exists! Login Instead'
-            return render_template("signup.html", error=e)
+            return render_template("signup.html", error=error)
 
     else:
         return render_template("signup.html")
@@ -205,12 +278,15 @@ def signup_post():
 def login_post():
     if request.method == "POST":
         result = request.form
-        email = result["email"].lower()
-        password = result["pass"]
+        email = result.get("email", "").lower()
+        password = result.get("pass", "")
 
-        try:
-            uid = User.query.filter_by(email=email).first().uid
-        except:
+        if not email or not password:
+            error = "Email and password are required."
+            return render_template("login.html", error=error)
+
+        user_record = User.query.filter_by(email=email).first()
+        if not user_record:
             error = 'Account not found! Sign Up Instead'
             return render_template("login.html", error=error)
 
@@ -222,18 +298,19 @@ def login_post():
                 otp_key = f"{email}_otp"
                 auth_key = f"{email}_auth"
 
-                redis_client.setex(otp_key, 120, otp)  # OTP valid for 5 minutes
-                redis_client.setex(auth_key, 120, password)
+                set_temp_data(otp_key, otp, 120)  # OTP valid for 2 minutes
+                set_temp_data(auth_key, password, 120)
 
                 res = make_response(redirect(url_for('verify_otp')))
                 res.set_cookie('email', email)
 
                 return res
             else:
-                return "Failed to send OTP."
+                error = "Failed to send OTP."
+                return render_template("login.html", error=error)
 
         except Exception as e:
-            # print(e)
+            print(f"Login error: {e}")
             if 'EMAIL_NOT_FOUND' in str(e):
                 error = 'Account not found! Sign Up Instead'
             else:
@@ -241,6 +318,7 @@ def login_post():
             return render_template("login.html", error=error)
     else:
         return render_template("login.html")
+
 
 @app.route('/')
 def index():
@@ -540,5 +618,5 @@ if __name__ == '__main__':
         scraper_thread.daemon = True  # Daemon thread will stop when the main Flask app stops
         scraper_thread.start()
         db.create_all()
-        app.run(debug=True)
+        app.run(debug=True, port=5000)
 
