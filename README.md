@@ -49,7 +49,15 @@ Yosemite is an AI-enabled smart platform that:
 - **Mobile-Friendly Interface**: Expanding to mobile platforms for broader accessibility.
 
 ## 📄 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License** (CC BY-NC-ND 4.0). You can view the full terms in the [LICENSE](LICENSE) file.
+
+### Key Terms:
+- **Attribution**: You must give appropriate credit by linking to this repository and citing the original author.
+- **NonCommercial**: This code cannot be used for commercial purposes.
+- **NoDerivatives**: Modifications or derivative works cannot be distributed without explicit permission.
+
+For any contributions, please seek prior approval from the original author.
+
 
 ## 📧 Contact
 For more information or queries, please reach out at **[pratye.aggarwal@gmail.com](mailto:pratye.aggarwal@gmail.com)**.
