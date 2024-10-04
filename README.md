@@ -4,7 +4,7 @@ Welcome to **Yosemite**, an AI-powered platform designed to help consumers make 
 
 ## 🌐 Live Demo
 Check out the live application at: [www.thirdeye.website](http://www.thirdeye.website)
-Wait for a few seconds for the server to start. It is hosted on Google Cloud Run.
+<br> Wait for a few seconds for the server to start. It is hosted on Google Cloud Run.</br>
 
 ## 🚀 Project Overview
 Yosemite is an AI-enabled smart platform that:
